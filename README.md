@@ -27,13 +27,31 @@ curl -sSL https://raw.githubusercontent.com/marquimRcc/android-regataos-linux/ma
 7. **Loja Complementar Aurora Store:** Vem com a loja alternativa de código aberto pré-instalada (permite baixar apps da Play Store com 1 clique, com ou sem conta Google).
 8. **Modo Multi-Janelas Livre:** Cada aplicativo Android abre em sua própria janela independente e redimensionável no KDE Plasma (arraste, maximize e minimize como qualquer app nativo).
 9. **Suporte a Jogos ARM (libndk):** Ativa tradução ARM para suporte a 99% dos jogos e apps mobile (Free Fire, Roblox, Brawl Stars, etc.).
-10. **Otimizações de Latência:** Reduz o atraso do cursor do mouse em jogos no Wayland (`persist.waydroid.cursor_on_subsurface`).
-11. **Integração com Dolphin (Gerenciador de Arquivos):** Permite clicar com o botão direito em qualquer arquivo `.apk` e escolher **"Instalar no Android (Waydroid)"**.
-12. **Desinstalação Gráfica com 1 Clique:** Clique com o botão direito em qualquer aplicativo Android no Menu Iniciar do Regata OS e escolha **"Desinstalar aplicativo"** para removê-lo instantaneamente com confirmação gráfica nativa.
-13. **Atalhos Automáticos na Área de Trabalho:**
+10. **Compatibilidade com Jogos Anti-Tamper / PairIP:** Configura Magisk Delta (Kitsune Mask), Zygisk, Play Integrity Fix e PairIPFix (LSPosed) com ocultação profunda (DenyList/HideList) para permitir a execução de jogos como Avatar World, Roblox e Brawl Stars.
+11. **Otimizações de Latência:** Reduz o atraso do cursor do mouse em jogos no Wayland (`persist.waydroid.cursor_on_subsurface`).
+12. **Integração com Dolphin (Gerenciador de Arquivos):** Permite clicar com o botão direito em qualquer arquivo `.apk` e escolher **"Instalar no Android (Waydroid)"**.
+13. **Desinstalação Gráfica com 1 Clique:** Clique com o botão direito em qualquer aplicativo Android no Menu Iniciar do Regata OS e escolha **"Desinstalar aplicativo"** para removê-lo instantaneamente com confirmação gráfica nativa.
+14. **Atalhos Automáticos na Área de Trabalho:**
    - **`Iniciar Android (Waydroid)`**: Atalho direto para iniciar o sistema Android.
    - **`Certificar Google Play`**: Obtém seu ID, copia para a área de transferência e abre o site de liberação do Google (se necessário).
    - **`Parar Android (Liberar RAM)`**: Encerra o contêiner e libera toda a memória RAM quando você parar de jogar/usar.
+
+---
+
+## 🛡️ Desbloqueio de Jogos Protegidos (Avatar World, Roblox, PairIP)
+
+Se você já possui o Waydroid instalado no Regata OS e deseja aplicar a camada de compatibilidade para jogos protegidos por **Play Integrity** ou **PairIP** (*Avatar World*, *Roblox*, etc.):
+
+```bash
+bash setup-pairip-magisk.sh
+```
+
+Esse script aplica automaticamente:
+- **Magisk Delta (Kitsune Mask)** com isolamento total;
+- **Zygisk & MagiskHide** ativos para ocultação de integridade;
+- **Play Integrity Fix (PIF)** para passar na verificação do Google Play;
+- **LSPosed (Zygisk)** e **PairIPFix** para contornar assinaturas e bloqueios de instalação;
+- Inclusão dos jogos na **DenyList** do Android.
 
 ---
 

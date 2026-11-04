@@ -157,6 +157,15 @@ else
     echo -e "${GREEN}Tradutor ARM libndk já configurado e ativo!${NC}"
 fi
 
+# Verificar se o Magisk Delta (Kitsune Mask) já está configurado no overlay
+if [ ! -d "/var/lib/waydroid/overlay/system/etc/init/magisk" ]; then
+    echo "Instalando Magisk Delta (Kitsune Mask) com isolamento avançado..."
+    cd "$SCRIPT_DIR"
+    sudo "$SCRIPT_DIR/venv/bin/python3" main.py install magisk
+else
+    echo -e "${GREEN}Magisk Delta já configurado!${NC}"
+fi
+
 # 7.1 Configurar perfil de dispositivo homologado (Google Pixel 6 Pro) para Play Store automática
 echo -e "\n${YELLOW}[7.1] Aplicando perfil de dispositivo homologado (Google Pixel 6 Pro)...${NC}"
 sudo python3 -c "
@@ -247,8 +256,64 @@ with open(cfg_path, 'w') as f:
 "
 sudo waydroid upgrade -o 2>/dev/null || true
 
-# 7.2 Instalar loja alternativa Aurora Store (sem necessidade de conta ou certificação)
-echo -e "\n${YELLOW}[7.2] Baixando loja complementar Aurora Store (FOSS)...${NC}"
+# 7.2 Configurar Suporte a Anti-Tamper e PairIP (Avatar World, Roblox, Supercell)
+echo -e "\n${YELLOW}[7.2] Configurando Zygisk, Play Integrity Fix e PairIPFix...${NC}"
+TMP_DIR="/tmp/waydroid_compat_modules"
+mkdir -p "$TMP_DIR"
+
+PIF_URL="https://github.com/KOWX712/PlayIntegrityFix/releases/download/v4.9-inject-s/PlayIntegrityFix_v4.9-inject-s.zip"
+LSPOSED_URL="https://github.com/mywalkb/LSPosed_mod/releases/download/v1.9.3_mod/LSPosed-v1.9.3_mod-7244-zygisk-release.zip"
+PAIRIPFIX_URL="https://github.com/ahmedmani/pairipfix/releases/download/v1.2/app-debug.apk"
+
+curl -L -s -o "$TMP_DIR/PlayIntegrityFix.zip" "$PIF_URL" || true
+curl -L -s -o "$TMP_DIR/LSPosed.zip" "$LSPOSED_URL" || true
+curl -L -s -o "$TMP_DIR/pairipfix.apk" "$PAIRIPFIX_URL" || true
+
+sudo python3 -c "
+import sqlite3, os
+db_dir = '/var/lib/waydroid/data/adb'
+os.makedirs(db_dir, exist_ok=True)
+db_path = os.path.join(db_dir, 'magisk.db')
+conn = sqlite3.connect(db_path)
+cur = conn.cursor()
+cur.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT, value INT, PRIMARY KEY(key));')
+cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('zygisk', 1);\")
+cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('magiskhide', 1);\")
+cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('denylist', 1);\")
+cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('sulist', 0);\")
+cur.execute('CREATE TABLE IF NOT EXISTS denylist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+cur.execute('CREATE TABLE IF NOT EXISTS hidelist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+packages_to_hide = [
+    ('com.google.android.gms', 'com.google.android.gms'),
+    ('com.google.android.gms', 'com.google.android.gms.unstable'),
+    ('com.android.vending', 'com.android.vending'),
+    ('com.pazugames.avatarworld', 'com.pazugames.avatarworld'),
+    ('com.roblox.client', 'com.roblox.client'),
+    ('com.supercell.brawlstars', 'com.supercell.brawlstars'),
+]
+for pkg, proc in packages_to_hide:
+    cur.execute('INSERT OR IGNORE INTO denylist (package_name, process) VALUES (?, ?);', (pkg, proc))
+    cur.execute('INSERT OR IGNORE INTO hidelist (package_name, process) VALUES (?, ?);', (pkg, proc))
+conn.commit()
+conn.close()
+"
+sudo chmod 600 /var/lib/waydroid/data/adb/magisk.db 2>/dev/null || true
+
+sudo systemctl start waydroid-container 2>/dev/null || true
+sleep 3
+sudo mkdir -p /var/lib/waydroid/data/local/tmp
+[ -f "$TMP_DIR/PlayIntegrityFix.zip" ] && sudo cp "$TMP_DIR/PlayIntegrityFix.zip" /var/lib/waydroid/data/local/tmp/
+[ -f "$TMP_DIR/LSPosed.zip" ] && sudo cp "$TMP_DIR/LSPosed.zip" /var/lib/waydroid/data/local/tmp/
+sudo chmod 777 /var/lib/waydroid/data/local/tmp/* 2>/dev/null || true
+
+sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c \
+    "BOOTMODE=true /data/adb/magisk/magisk --install-module /data/local/tmp/PlayIntegrityFix.zip" 2>/dev/null || true
+
+sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c \
+    "BOOTMODE=true /data/adb/magisk/magisk --install-module /data/local/tmp/LSPosed.zip" 2>/dev/null || true
+
+# 7.3 Instalar loja alternativa Aurora Store (sem necessidade de conta ou certificação)
+echo -e "\n${YELLOW}[7.3] Baixando loja complementar Aurora Store (FOSS)...${NC}"
 AURORA_APK="/tmp/AuroraStore.apk"
 curl -L -s -o "$AURORA_APK" "https://auroraoss.com/downloads/AuroraStore/Release/preload/AuroraStore-preload-4.7.5.apk" || true
 if [ -f "$AURORA_APK" ] && [ -s "$AURORA_APK" ]; then
@@ -256,6 +321,12 @@ if [ -f "$AURORA_APK" ] && [ -s "$AURORA_APK" ]; then
     waydroid app install "$AURORA_APK" 2>/dev/null || true
     rm -f "$AURORA_APK"
 fi
+
+if [ -f "$TMP_DIR/pairipfix.apk" ]; then
+    echo "Instalando módulo PairIPFix no Waydroid..."
+    waydroid app install "$TMP_DIR/pairipfix.apk" 2>/dev/null || true
+fi
+rm -rf "$TMP_DIR"
 
 # Resetar dados da Play Store e GMS para aplicar novas assinaturas
 sudo waydroid shell pm clear com.android.vending 2>/dev/null || true
@@ -615,6 +686,7 @@ echo ""
 echo -e "${BOLD}Otimizações ativas:${NC}"
 echo -e "✔️ Correção de Pressure Stall Information (psi=1) no kernel"
 echo -e "✔️ Perfil homologado de Google Pixel 6 Pro ativo (Play Store oficial)"
+echo -e "✔️ Suporte a jogos com Anti-Tamper/PairIP (Magisk Delta + Play Integrity Fix + LSPosed)"
 echo -e "✔️ Loja complementar Aurora Store pré-instalada (acesso FOSS à Play Store)"
 echo -e "✔️ Redução de latência do mouse ativa"
 echo -e "✔️ Atalho 'Iniciar Android (Waydroid)' criado na Área de Trabalho"
