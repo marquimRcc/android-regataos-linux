@@ -1,14 +1,16 @@
 #!/bin/bash
 # ==============================================================================
-# Script de Compatibilidade Anti-Tamper / PairIP para Waydroid no Regata OS
+# Script de Compatibilidade 100% Automatizada Anti-Tamper / PairIP (Waydroid)
 # Repositório: https://github.com/marquimRcc/android-regataos-linux
 # Branch: feature/magisk-play-integrity
 # ==============================================================================
-# Este script ativa o Magisk Delta (Kitsune Mask), Zygisk, Play Integrity Fix
-# e o módulo PairIPFix para permitir a execução de jogos protegidos como:
-# - Avatar World (Pazu Games)
-# - Roblox
-# - Brawl Stars (Supercell)
+# Totalmente silencioso e pré-configurado:
+# - Instala Magisk Delta (Kitsune Mask)
+# - Ativa Zygisk e MagiskHide nativamente no banco de dados
+# - Injeta Play Integrity Fix diretamente nos módulos
+# - Injeta LSPosed Framework (Zygisk) diretamente nos módulos
+# - Ativa o PairIPFix no banco de dados do LSPosed (com escopo no Avatar World)
+# - O usuário final só abre o jogo e joga!
 # ==============================================================================
 
 GREEN='\033[0;32m'
@@ -20,12 +22,12 @@ NC='\033[0m'
 
 clear
 echo -e "${BLUE}================================================================${NC}"
-echo -e "${BOLD}${GREEN}  Desbloqueio de Jogos Anti-Tamper / PairIP no Waydroid (Regata OS)  ${NC}"
+echo -e "${BOLD}${GREEN}  Desbloqueio Automático: Avatar World & Anti-Tamper (Waydroid) ${NC}"
 echo -e "${BLUE}================================================================${NC}"
 echo ""
 
-# 1. Verificar privilégios de administrador
-echo -e "${YELLOW}[1/6] Verificando permissões de administrador (sudo)...${NC}"
+# 1. Privilégios sudo
+echo -e "${YELLOW}[1/5] Verificando privilégios de administrador (sudo)...${NC}"
 if ! sudo -v; then
     echo -e "${RED}Erro: Senha incorreta ou permissão recusada.${NC}"
     exit 1
@@ -33,18 +35,18 @@ fi
 
 while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
 
-# 2. Encerrar instâncias do Waydroid para aplicar modificações com segurança
-echo -e "\n${YELLOW}[2/6] Parando serviços do Waydroid para aplicação das camadas...${NC}"
+# 2. Encerrar Waydroid para aplicar injeções no sistema de arquivos
+echo -e "\n${YELLOW}[2/5] Parando serviços do Waydroid para injeção limpa...${NC}"
 waydroid session stop 2>/dev/null || true
 sudo systemctl stop waydroid-container 2>/dev/null || true
 sleep 2
 
-# 3. Verificar e Instalar Magisk Delta (Kitsune Mask) via waydroid_script
-echo -e "\n${YELLOW}[3/6] Configurando Magisk Delta (Kitsune Mask) no sistema Android...${NC}"
+# 3. Verificar e Configurar Magisk Delta se necessário
+echo -e "\n${YELLOW}[3/5] Configurando base do Magisk Delta nas imagens do Android...${NC}"
 SCRIPT_DIR="$HOME/waydroid_script"
 
 if [ ! -d "$SCRIPT_DIR" ]; then
-    echo "Baixando utilitário waydroid_script..."
+    echo "Baixando script utilitário do Waydroid..."
     mkdir -p "$SCRIPT_DIR"
     curl -L -s https://github.com/casualsnek/waydroid_script/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$SCRIPT_DIR"
 fi
@@ -55,143 +57,197 @@ if [ ! -d "$SCRIPT_DIR/venv" ]; then
     "$SCRIPT_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
 fi
 
-# Instalar Magisk no contêiner
-echo "Aplicando injeção do Magisk Delta nas imagens do Waydroid..."
 cd "$SCRIPT_DIR"
 sudo "$SCRIPT_DIR/venv/bin/python3" main.py install magisk
 
-# 4. Baixar Módulos: Play Integrity Fix, LSPosed e PairIPFix
-echo -e "\n${YELLOW}[4/6] Baixando módulos de certificação e bypass de anti-tamper...${NC}"
-TMP_DIR="/tmp/waydroid_compat_modules"
-mkdir -p "$TMP_DIR"
-
-PIF_URL="https://github.com/KOWX712/PlayIntegrityFix/releases/download/v4.9-inject-s/PlayIntegrityFix_v4.9-inject-s.zip"
-LSPOSED_URL="https://github.com/mywalkb/LSPosed_mod/releases/download/v1.9.3_mod/LSPosed-v1.9.3_mod-7244-zygisk-release.zip"
-PAIRIPFIX_URL="https://github.com/ahmedmani/pairipfix/releases/download/v1.2/app-debug.apk"
-
-echo "Baixando Play Integrity Fix..."
-curl -L -s -o "$TMP_DIR/PlayIntegrityFix.zip" "$PIF_URL"
-
-echo "Baixando LSPosed (Zygisk Release)..."
-curl -L -s -o "$TMP_DIR/LSPosed.zip" "$LSPOSED_URL"
-
-echo "Baixando módulo PairIPFix (APK)..."
-curl -L -s -o "$TMP_DIR/pairipfix.apk" "$PAIRIPFIX_URL"
-
-# 5. Configurar banco de dados do Magisk (Zygisk, MagiskHide, SuList e DenyList)
-echo -e "\n${YELLOW}[5/6] Configurando Zygisk, MagiskHide e isolamento de processos...${NC}"
+# 4. Injeção direta e pré-configuração (Zygisk, Play Integrity Fix, LSPosed, PairIPFix)
+echo -e "\n${YELLOW}[4/5] Injetando e ativando módulos automaticamente (Zygisk + LSPosed + PIF)...${NC}"
 sudo python3 -c "
-import sqlite3, os
+import zipfile, io, os, shutil, sqlite3, urllib.request
 
 user = os.environ.get('SUDO_USER', os.environ.get('USER', 'pcmini'))
-possible_dirs = [
-    f'/home/{user}/.local/share/waydroid/data/adb',
-    '/var/lib/waydroid/data/adb'
+target_dirs = [
+    f'/home/{user}/.local/share/waydroid/data',
+    '/var/lib/waydroid/data'
 ]
 
-for db_dir in possible_dirs:
-    if os.path.exists(os.path.dirname(db_dir)):
-        os.makedirs(db_dir, exist_ok=True)
-        db_path = os.path.join(db_dir, 'magisk.db')
-        conn = sqlite3.connect(db_path)
-        cur = conn.cursor()
+# Baixar PIF
+print('  -> Baixando Play Integrity Fix...')
+pif_url = 'https://github.com/KOWX712/PlayIntegrityFix/releases/download/v4.9-inject-s/PlayIntegrityFix_v4.9-inject-s.zip'
+req = urllib.request.Request(pif_url, headers={'User-Agent': 'Mozilla/5.0'})
+with urllib.request.urlopen(req) as resp:
+    pif_zip_data = resp.read()
 
-        # Configurações globais
-        cur.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT, value INT, PRIMARY KEY(key));')
-        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('zygisk', 1);\")
-        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('magiskhide', 1);\")
-        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('denylist', 1);\")
-        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('sulist', 0);\")
+# Baixar LSPosed
+print('  -> Baixando LSPosed Framework (Zygisk)...')
+lsp_url = 'https://github.com/mywalkb/LSPosed_mod/releases/download/v1.9.3_mod/LSPosed-v1.9.3_mod-7244-zygisk-release.zip'
+req = urllib.request.Request(lsp_url, headers={'User-Agent': 'Mozilla/5.0'})
+with urllib.request.urlopen(req) as resp:
+    lsp_zip_data = resp.read()
 
-        # DenyList e HideList
-        cur.execute('CREATE TABLE IF NOT EXISTS denylist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
-        cur.execute('CREATE TABLE IF NOT EXISTS hidelist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+for base_dir in target_dirs:
+    if not os.path.exists(base_dir):
+        continue
+    
+    adb_dir = os.path.join(base_dir, 'adb')
+    modules_dir = os.path.join(adb_dir, 'modules')
+    os.makedirs(modules_dir, exist_ok=True)
 
-        packages_to_hide = [
-            ('com.google.android.gms', 'com.google.android.gms'),
-            ('com.google.android.gms', 'com.google.android.gms.unstable'),
-            ('com.android.vending', 'com.android.vending'),
-            ('com.pazugames.avatarworld', 'com.pazugames.avatarworld'),
-            ('com.roblox.client', 'com.roblox.client'),
-            ('com.supercell.brawlstars', 'com.supercell.brawlstars'),
-        ]
+    # 4.1 Configurar magisk.db com Zygisk ativado por padrão
+    db_path = os.path.join(adb_dir, 'magisk.db')
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT, value INT, PRIMARY KEY(key));')
+    cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('zygisk', 1);\")
+    cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('magiskhide', 1);\")
+    cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('denylist', 1);\")
+    cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('sulist', 0);\")
 
-        for pkg, proc in packages_to_hide:
-            cur.execute('INSERT OR IGNORE INTO denylist (package_name, process) VALUES (?, ?);', (pkg, proc))
-            cur.execute('INSERT OR IGNORE INTO hidelist (package_name, process) VALUES (?, ?);', (pkg, proc))
+    cur.execute('CREATE TABLE IF NOT EXISTS denylist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+    cur.execute('CREATE TABLE IF NOT EXISTS hidelist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+    for pkg, proc in [
+        ('com.google.android.gms', 'com.google.android.gms'),
+        ('com.google.android.gms', 'com.google.android.gms.unstable'),
+        ('com.android.vending', 'com.android.vending'),
+        ('com.pazugames.avatarworld', 'com.pazugames.avatarworld'),
+        ('com.roblox.client', 'com.roblox.client'),
+        ('com.supercell.brawlstars', 'com.supercell.brawlstars')
+    ]:
+        cur.execute('INSERT OR IGNORE INTO denylist (package_name, process) VALUES (?, ?);', (pkg, proc))
+        cur.execute('INSERT OR IGNORE INTO hidelist (package_name, process) VALUES (?, ?);', (pkg, proc))
+    conn.commit()
+    conn.close()
+    try:
+        os.chmod(db_path, 0o600)
+    except Exception:
+        pass
 
-        conn.commit()
-        conn.close()
-        try:
-            os.chmod(db_path, 0o600)
-        except Exception:
-            pass
+    # 4.2 Injetar Play Integrity Fix
+    pif_mod_dir = os.path.join(modules_dir, 'playintegrityfix')
+    os.makedirs(pif_mod_dir, exist_ok=True)
+    with zipfile.ZipFile(io.BytesIO(pif_zip_data)) as z_pif:
+        z_pif.extractall(pif_mod_dir)
+    open(os.path.join(pif_mod_dir, 'auto_mount'), 'w').close()
+    for root, dirs, files in os.walk(pif_mod_dir):
+        for f in files:
+            if f.endswith('.sh'):
+                try:
+                    os.chmod(os.path.join(root, f), 0o755)
+                except Exception:
+                    pass
+
+    # 4.3 Injetar LSPosed Zygisk
+    lsp_mod_dir = os.path.join(modules_dir, 'zygisk_lsposed')
+    os.makedirs(lsp_mod_dir, exist_ok=True)
+    with zipfile.ZipFile(io.BytesIO(lsp_zip_data)) as z_lsp:
+        for fname in ['module.prop', 'post-fs-data.sh', 'service.sh', 'sepolicy.rule', 'system.prop', 'daemon', 'daemon.apk', 'manager.apk']:
+            if fname in z_lsp.namelist():
+                z_lsp.extract(fname, lsp_mod_dir)
+        
+        os.makedirs(os.path.join(lsp_mod_dir, 'framework'), exist_ok=True)
+        if 'framework/lspd.dex' in z_lsp.namelist():
+            with z_lsp.open('framework/lspd.dex') as src, open(os.path.join(lsp_mod_dir, 'framework', 'lspd.dex'), 'wb') as dst:
+                dst.write(src.read())
+
+        zygisk_dir = os.path.join(lsp_mod_dir, 'zygisk')
+        os.makedirs(zygisk_dir, exist_ok=True)
+        arch_map = {
+            'lib/x86_64/liblspd.so': 'x86_64.so',
+            'lib/x86/liblspd.so': 'x86.so',
+            'lib/arm64-v8a/liblspd.so': 'arm64-v8a.so',
+            'lib/armeabi-v7a/liblspd.so': 'armeabi-v7a.so'
+        }
+        for src_path, dst_name in arch_map.items():
+            if src_path in z_lsp.namelist():
+                with z_lsp.open(src_path) as src, open(os.path.join(zygisk_dir, dst_name), 'wb') as dst:
+                    dst.write(src.read())
+
+        for bin_path in ['bin/x86_64/dex2oat', 'bin/arm64-v8a/dex2oat', 'bin/armeabi-v7a/dex2oat', 'bin/x86/dex2oat']:
+            if bin_path in z_lsp.namelist():
+                target_bin = os.path.join(lsp_mod_dir, bin_path)
+                os.makedirs(os.path.dirname(target_bin), exist_ok=True)
+                with z_lsp.open(bin_path) as src, open(target_bin, 'wb') as dst:
+                    dst.write(src.read())
+                try:
+                    os.chmod(target_bin, 0o755)
+                except Exception:
+                    pass
+
+    open(os.path.join(lsp_mod_dir, 'auto_mount'), 'w').close()
+    for f in ['post-fs-data.sh', 'service.sh', 'daemon']:
+        p = os.path.join(lsp_mod_dir, f)
+        if os.path.exists(p):
+            try:
+                os.chmod(p, 0o755)
+            except Exception:
+                pass
+
+    # 4.4 Pré-configurar banco do LSPosed com PairIPFix já ativado e com Avatar World no escopo
+    lspd_config_dir = os.path.join(adb_dir, 'lspd', 'config')
+    os.makedirs(lspd_config_dir, exist_ok=True)
+    db_lsp = os.path.join(lspd_config_dir, 'modules_config.db')
+    conn_lsp = sqlite3.connect(db_lsp)
+    c_lsp = conn_lsp.cursor()
+    c_lsp.execute('CREATE TABLE IF NOT EXISTS modules (mid INTEGER PRIMARY KEY AUTOINCREMENT, module_pkg_name TEXT UNIQUE, apk_path TEXT, enabled INTEGER, auto_include INTEGER);')
+    c_lsp.execute('CREATE TABLE IF NOT EXISTS scope (mid INTEGER, app_pkg_name TEXT, user_id INTEGER, PRIMARY KEY (mid, app_pkg_name, user_id));')
+    c_lsp.execute(\"INSERT OR REPLACE INTO modules (mid, module_pkg_name, apk_path, enabled, auto_include) VALUES (1, 'com.android.pairipfix', '', 1, 1);\")
+    for app in ['com.pazugames.avatarworld', 'com.roblox.client', 'com.supercell.brawlstars']:
+        c_lsp.execute(\"INSERT OR IGNORE INTO scope (mid, app_pkg_name, user_id) VALUES (1, ?, 0);\", (app,))
+    conn_lsp.commit()
+    conn_lsp.close()
+    try:
+        os.chmod(db_lsp, 0o600)
+    except Exception:
+        pass
+
+print('  -> Injeção concluída com sucesso em todas as árvores do contêiner!')
 "
 
-# Iniciar o contêiner para instalar os módulos via ambiente Android
+# 5. Baixar e instalar APKs complementares (PairIPFix e LSPosed Manager)
+echo -e "\n${YELLOW}[5/5] Instalando aplicativos de controle e finalizando...${NC}"
 sudo systemctl start waydroid-container
 sleep 3
 
-# Copiar arquivos temporários para dentro do contêiner (suportando pasta do usuário e sistema)
+TMP_APKS="/tmp/waydroid_install_apks"
+mkdir -p "$TMP_APKS"
+
+# Extrair manager.apk do LSPosed para acesso visual
 USER_DATA="/home/${SUDO_USER:-$USER}/.local/share/waydroid/data"
 [ ! -d "$USER_DATA" ] && USER_DATA="/var/lib/waydroid/data"
+if [ -f "$USER_DATA/adb/modules/zygisk_lsposed/manager.apk" ]; then
+    cp "$USER_DATA/adb/modules/zygisk_lsposed/manager.apk" "$TMP_APKS/lsposed_manager.apk"
+fi
 
-sudo mkdir -p "$USER_DATA/local/tmp" /var/lib/waydroid/data/local/tmp 2>/dev/null || true
-sudo cp "$TMP_DIR/PlayIntegrityFix.zip" "$USER_DATA/local/tmp/" 2>/dev/null || true
-sudo cp "$TMP_DIR/LSPosed.zip" "$USER_DATA/local/tmp/" 2>/dev/null || true
-sudo cp "$TMP_DIR/PlayIntegrityFix.zip" /var/lib/waydroid/data/local/tmp/ 2>/dev/null || true
-sudo cp "$TMP_DIR/LSPosed.zip" /var/lib/waydroid/data/local/tmp/ 2>/dev/null || true
-sudo chmod 777 "$USER_DATA/local/tmp"/* /var/lib/waydroid/data/local/tmp/* 2>/dev/null || true
+# Baixar PairIPFix APK
+curl -L -s -o "$TMP_APKS/pairipfix.apk" "https://github.com/ahmedmani/pairipfix/releases/download/v1.2/app-debug.apk" || true
 
-# Instalar módulos com o binário do Magisk via lxc-attach
-echo "Instalando módulo Play Integrity Fix no Magisk..."
-sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c \
-    "BOOTMODE=true /data/adb/magisk/magisk --install-module /data/local/tmp/PlayIntegrityFix.zip" 2>/dev/null || true
+# Instalar no Android
+[ -f "$TMP_APKS/lsposed_manager.apk" ] && waydroid app install "$TMP_APKS/lsposed_manager.apk" 2>/dev/null || true
+[ -f "$TMP_APKS/pairipfix.apk" ] && waydroid app install "$TMP_APKS/pairipfix.apk" 2>/dev/null || true
 
-echo "Instalando módulo LSPosed (Zygisk) no Magisk..."
-sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c \
-    "BOOTMODE=true /data/adb/magisk/magisk --install-module /data/local/tmp/LSPosed.zip" 2>/dev/null || true
-
-# 6. Limpar cache da Play Store e Play Services
-echo -e "\n${YELLOW}[6/6] Limpando dados residuais da Google Play e finalizando...${NC}"
+# Resetar dados da Play Store e Play Services para renovar atestação
 sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c "pm clear com.android.vending" 2>/dev/null || true
 sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c "pm clear com.google.android.gms" 2>/dev/null || true
 
-# Reiniciar o contêiner para carregar o Zygisk no boot
+rm -rf "$TMP_APKS"
+
+# Reiniciar o contêiner para que o Zygisk e o LSPosed subam ativos no boot do Android
 sudo systemctl restart waydroid-container
 sleep 2
 
-# Extrair e instalar o gerenciador do LSPosed (manager.apk) e PairIPFix
-if [ -f "$TMP_DIR/LSPosed.zip" ]; then
-    unzip -p "$TMP_DIR/LSPosed.zip" manager.apk > "$TMP_DIR/lsposed_manager.apk" 2>/dev/null || true
-    if [ -f "$TMP_DIR/lsposed_manager.apk" ]; then
-        echo "Instalando Gerenciador LSPosed no Waydroid..."
-        waydroid app install "$TMP_DIR/lsposed_manager.apk" 2>/dev/null || true
-    fi
-fi
-
-if [ -f "$TMP_DIR/pairipfix.apk" ]; then
-    echo "Instalando módulo PairIPFix no Waydroid..."
-    waydroid app install "$TMP_DIR/pairipfix.apk" 2>/dev/null || true
-fi
-
-rm -rf "$TMP_DIR"
-
 echo ""
 echo -e "${BLUE}================================================================${NC}"
-echo -e "${BOLD}${GREEN}    CONFIGURAÇÃO DE COMPATIBILIDADE CONCLUÍDA COM SUCESSO!     ${NC}"
+echo -e "${BOLD}${GREEN}  TUDO 100% CONFIGURADO E PRONTO AUTOMATICAMENTE!               ${NC}"
 echo -e "${BLUE}================================================================${NC}"
 echo ""
-echo -e "${BOLD}O que foi ativado:${NC}"
-echo -e "✔️ ${GREEN}Magisk Delta (Kitsune Mask)${NC} com isolamento profundo"
-echo -e "✔️ ${GREEN}Zygisk & MagiskHide${NC} ativados nativamente"
-echo -e "✔️ ${GREEN}Play Integrity Fix [INJECT]${NC} instalado para passar na integridade do Google"
-echo -e "✔️ ${GREEN}LSPosed (Zygisk)${NC} instalado para gerenciar módulos de runtime"
-echo -e "✔️ ${GREEN}PairIPFix${NC} instalado para neutralizar a checagem anti-tamper"
-echo -e "✔️ Processos de ${YELLOW}Avatar World${NC}, ${YELLOW}Play Store${NC} e ${YELLOW}Play Services${NC} adicionados à DenyList"
+echo -e "✔️ ${GREEN}Zygisk & MagiskHide${NC} ativados na inicialização do sistema"
+echo -e "✔️ ${GREEN}Play Integrity Fix${NC} ativado para certificação da Play Store"
+echo -e "✔️ ${GREEN}LSPosed Framework${NC} ativado nativamente"
+echo -e "✔️ ${GREEN}PairIPFix${NC} pré-ativado com suporte automático para o ${BOLD}Avatar World${NC}"
 echo ""
-echo -e "${BOLD}Como testar agora:${NC}"
-echo -e "1. Abra o Waydroid pelo atalho ${GREEN}'Iniciar Android'${NC} na Área de Trabalho."
-echo -e "2. Abra o aplicativo ${YELLOW}LSPosed${NC} (notificação ou app) e confira se o módulo ${BOLD}PairIPFix${NC} está marcado."
-echo -e "3. Abra a Google Play Store (ou instale o APK do Avatar World) e inicie o jogo!"
+echo -e "${BOLD}O que você precisa fazer agora:${NC}"
+echo -e "1. Abra o ${GREEN}Iniciar Android (Waydroid)${NC} na Área de Trabalho."
+echo -e "2. Abra a ${YELLOW}Google Play Store${NC} com a sua conta Google."
+echo -e "3. Baixe e instale o ${BOLD}Avatar World${NC}."
+echo -e "4. Jogue à vontade! Ele vai abrir normalmente."
 echo ""
