@@ -147,8 +147,17 @@ sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c "pm cl
 sudo systemctl restart waydroid-container
 sleep 2
 
-# Instalar o APK do PairIPFix caso o Waydroid já esteja acessível
+# Extrair e instalar o gerenciador do LSPosed (manager.apk) e PairIPFix
+if [ -f "$TMP_DIR/LSPosed.zip" ]; then
+    unzip -p "$TMP_DIR/LSPosed.zip" manager.apk > "$TMP_DIR/lsposed_manager.apk" 2>/dev/null || true
+    if [ -f "$TMP_DIR/lsposed_manager.apk" ]; then
+        echo "Instalando Gerenciador LSPosed no Waydroid..."
+        waydroid app install "$TMP_DIR/lsposed_manager.apk" 2>/dev/null || true
+    fi
+fi
+
 if [ -f "$TMP_DIR/pairipfix.apk" ]; then
+    echo "Instalando módulo PairIPFix no Waydroid..."
     waydroid app install "$TMP_DIR/pairipfix.apk" 2>/dev/null || true
 fi
 

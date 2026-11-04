@@ -322,6 +322,14 @@ if [ -f "$AURORA_APK" ] && [ -s "$AURORA_APK" ]; then
     rm -f "$AURORA_APK"
 fi
 
+if [ -f "$TMP_DIR/LSPosed.zip" ]; then
+    unzip -p "$TMP_DIR/LSPosed.zip" manager.apk > "$TMP_DIR/lsposed_manager.apk" 2>/dev/null || true
+    if [ -f "$TMP_DIR/lsposed_manager.apk" ]; then
+        echo "Instalando Gerenciador LSPosed no Waydroid..."
+        waydroid app install "$TMP_DIR/lsposed_manager.apk" 2>/dev/null || true
+    fi
+fi
+
 if [ -f "$TMP_DIR/pairipfix.apk" ]; then
     echo "Instalando módulo PairIPFix no Waydroid..."
     waydroid app install "$TMP_DIR/pairipfix.apk" 2>/dev/null || true
