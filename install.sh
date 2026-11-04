@@ -73,6 +73,12 @@ else
     echo -e "${GREEN}Biblioteca libgbinder1 já está na versão compatível!${NC}"
 fi
 
+# 4.1 Instalar módulo gbinder corrigido para Python 3.13 e configurar dnsmasq
+echo -e "\n${YELLOW}[4.1] Configurando módulo gbinder e rotas de rede...${NC}"
+sudo curl -L -s -o /usr/lib64/python3.13/site-packages/gbinder.cpython-313-x86_64-linux-gnu.so \
+    "https://raw.githubusercontent.com/marquimRcc/android-regataos-linux/main/assets/gbinder.cpython-313-x86_64-linux-gnu.so"
+sudo ln -sf /usr/sbin/dnsmasq /usr/bin/dnsmasq
+
 # 5. Habilitar serviço do contêiner e inicializar a imagem do Android
 echo -e "\n${YELLOW}[5/7] Configurando contêiner e imagens do sistema...${NC}"
 sudo systemctl enable --now waydroid-container
