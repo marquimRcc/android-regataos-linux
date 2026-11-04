@@ -20,7 +20,7 @@ echo -e "${BLUE}================================================================
 echo ""
 
 # 1. Solicitar permissões de administrador no início
-echo -e "${YELLOW}[1/7] Verificando privilégios de administrador (sudo)...${NC}"
+echo -e "${YELLOW}[1/8] Verificando privilégios de administrador (sudo)...${NC}"
 if ! sudo -v; then
     echo -e "${RED}Erro: Senha incorreta ou permissão recusada.${NC}"
     read -p "Pressione [Enter] para fechar..."
@@ -30,8 +30,33 @@ fi
 # Manter sudo vivo durante a execução do script
 while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
 
-# 2. Instalar dependências base do sistema
-echo -e "\n${YELLOW}[2/7] Instalando dependências do sistema via zypper...${NC}"
+# 2. Configurar parâmetro de kernel psi=1 (Pressure Stall Information - Essencial para o Android não fechar)
+echo -e "\n${YELLOW}[2/8] Verificando configuração do Kernel (psi=1)...${NC}"
+NEED_REBOOT=0
+if ! grep -q "psi=1" /etc/default/grub 2>/dev/null; then
+    echo "Habilitando psi=1 no GRUB para o Android..."
+    sudo python3 -c "
+with open('/etc/default/grub', 'r') as f:
+    text = f.read()
+import re
+if 'psi=1' not in text:
+    new_text = re.sub(r'(GRUB_CMDLINE_LINUX_DEFAULT=[\'\"])', r'\g<1>psi=1 ', text)
+    with open('/etc/default/grub', 'w') as f:
+        f.write(new_text)
+"
+    echo "Atualizando inicializador do sistema (grub2-mkconfig)..."
+    sudo /usr/sbin/grub2-mkconfig -o /boot/grub2/grub.cfg
+    NEED_REBOOT=1
+else
+    echo -e "${GREEN}Parâmetro psi=1 já configurado no GRUB!${NC}"
+fi
+
+if [ ! -f /proc/pressure/cpu ]; then
+    NEED_REBOOT=1
+fi
+
+# 3. Instalar dependências base do sistema
+echo -e "\n${YELLOW}[3/8] Instalando dependências do sistema via zypper...${NC}"
 sudo zypper --non-interactive install --no-recommends \
     lxc \
     python313-gobject \
@@ -42,8 +67,8 @@ sudo zypper --non-interactive install --no-recommends \
     tar \
     xclip
 
-# 3. Baixar e instalar o Waydroid (contornando falso conflito de versão do repositório)
-echo -e "\n${YELLOW}[3/7] Instalando pacote Waydroid oficial...${NC}"
+# 4. Baixar e instalar o Waydroid (contornando falso conflito de versão do repositório)
+echo -e "\n${YELLOW}[4/8] Instalando pacote Waydroid oficial...${NC}"
 if ! command -v waydroid &>/dev/null; then
     echo "Baixando pacote Waydroid do repositório regataos..."
     zypper --non-interactive download waydroid || true
@@ -59,8 +84,8 @@ else
     echo -e "${GREEN}Pacote Waydroid já instalado!${NC}"
 fi
 
-# 4. Atualizar libgbinder1 (garante compatibilidade com Python 3.13)
-echo -e "\n${YELLOW}[4/7] Verificando biblioteca libgbinder1...${NC}"
+# 5. Atualizar libgbinder1 (garante compatibilidade com Python 3.13)
+echo -e "\n${YELLOW}[5/8] Verificando biblioteca libgbinder1...${NC}"
 if ! nm -D /usr/lib64/libgbinder.so.1 2>/dev/null | grep -q "gbinder_servicemanager_new2"; then
     echo "Atualizando libgbinder1 para versão com suporte a runtime binder..."
     TMP_RPM="/tmp/libgbinder1_updated.rpm"
@@ -73,14 +98,14 @@ else
     echo -e "${GREEN}Biblioteca libgbinder1 já está na versão compatível!${NC}"
 fi
 
-# 4.1 Instalar módulo gbinder corrigido para Python 3.13 e configurar dnsmasq
-echo -e "\n${YELLOW}[4.1] Configurando módulo gbinder e rotas de rede...${NC}"
+# 5.1 Instalar módulo gbinder corrigido para Python 3.13 e configurar dnsmasq
+echo -e "\n${YELLOW}[5.1] Configurando módulo gbinder e rotas de rede...${NC}"
 sudo curl -L -s -o /usr/lib64/python3.13/site-packages/gbinder.cpython-313-x86_64-linux-gnu.so \
     "https://raw.githubusercontent.com/marquimRcc/android-regataos-linux/main/assets/gbinder.cpython-313-x86_64-linux-gnu.so"
 sudo ln -sf /usr/sbin/dnsmasq /usr/bin/dnsmasq
 
-# 5. Habilitar serviço do contêiner e inicializar a imagem do Android
-echo -e "\n${YELLOW}[5/7] Configurando contêiner e imagens do sistema...${NC}"
+# 6. Habilitar serviço do contêiner e inicializar a imagem do Android
+echo -e "\n${YELLOW}[6/8] Configurando contêiner e imagens do sistema...${NC}"
 sudo systemctl enable --now waydroid-container
 
 if [ ! -f /var/lib/waydroid/images/system.img ]; then
@@ -91,8 +116,8 @@ else
     echo -e "${GREEN}Imagens do Android já estão instaladas!${NC}"
 fi
 
-# 6. Configurar traduções ARM (libndk) para permitir rodar jogos e aplicativos de celular
-echo -e "\n${YELLOW}[6/7] Configurando suporte para jogos e apps ARM (libndk)...${NC}"
+# 7. Configurar traduções ARM (libndk) para permitir rodar jogos e aplicativos de celular
+echo -e "\n${YELLOW}[7/8] Configurando suporte para jogos e apps ARM (libndk)...${NC}"
 SCRIPT_DIR="$HOME/waydroid_script"
 
 if [ ! -d "$SCRIPT_DIR" ]; then
@@ -116,13 +141,13 @@ else
     echo -e "${GREEN}Tradutor ARM libndk já configurado e ativo!${NC}"
 fi
 
-# 7. Otimizações de Desempenho e Usabilidade Pós-Instalação
-echo -e "\n${YELLOW}[7/7] Aplicando otimizações de desempenho e atalhos...${NC}"
+# 8. Otimizações de Desempenho e Usabilidade Pós-Instalação
+echo -e "\n${YELLOW}[8/8] Aplicando otimizações de desempenho e atalhos...${NC}"
 
-# 7.1 Otimização de latência do cursor no Wayland
+# 8.1 Otimização de latência do cursor no Wayland
 sudo waydroid prop set persist.waydroid.cursor_on_subsurface true 2>/dev/null || true
 
-# 7.2 Instalação com 2 cliques ou botão direito para arquivos .APK
+# 8.2 Instalação com 2 cliques ou botão direito para arquivos .APK
 mkdir -p "$HOME/.local/share/kio/servicemenus" "$HOME/.local/share/applications"
 
 cat << 'EOF' > "$HOME/.local/share/kio/servicemenus/waydroid-install.desktop"
@@ -150,7 +175,7 @@ Terminal=false
 Categories=System;
 EOF
 
-# 7.3 Script utilitário para certificação da Play Store
+# 8.3 Script utilitário para certificação da Play Store
 mkdir -p "$HOME/.local/bin"
 cat << 'EOF' > "$HOME/.local/bin/waydroid-cert"
 #!/bin/bash
@@ -185,11 +210,24 @@ read -p "Pressione [Enter] para fechar..."
 EOF
 chmod +x "$HOME/.local/bin/waydroid-cert"
 
-# 7.4 Atalhos úteis na Área de Trabalho
+# 8.4 Atalhos úteis na Área de Trabalho
 DESKTOP_DIR="$HOME/Área de trabalho"
 [ ! -d "$DESKTOP_DIR" ] && DESKTOP_DIR="$HOME/Desktop"
 
 if [ -d "$DESKTOP_DIR" ]; then
+    cat << 'EOF' > "$DESKTOP_DIR/Iniciar-Android.desktop"
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Terminal=true
+Exec=/usr/bin/waydroid show-full-ui
+Name=Iniciar Android (Waydroid)
+Comment=Inicia a tela do Android com Google Play Store
+Icon=waydroid
+Categories=System;
+EOF
+
     cat << 'EOF' > "$DESKTOP_DIR/Certificar-PlayStore.desktop"
 [Desktop Entry]
 Encoding=UTF-8
@@ -224,6 +262,13 @@ EOF
 Parabéns! O Android (Waydroid) já está instalado e otimizado.
 
 --------------------------------------------------------------------
+AVISO IMPORTANTE: REINICIALIZAÇÃO DO SISTEMA
+--------------------------------------------------------------------
+Para que o Android inicialize e não feche sozinho, o sistema precisa
+do parâmetro de kernel "psi=1". Se foi feita a configuração recente
+no GRUB, REINICIE o computador uma vez antes de abrir o Android.
+
+--------------------------------------------------------------------
 PASSO 1: ENTRAR NA SESSÃO WAYLAND (OBRIGATÓRIO)
 --------------------------------------------------------------------
 O Waydroid precisa da tecnologia Wayland para funcionar com aceleração
@@ -233,15 +278,15 @@ gráfica da sua placa de vídeo.
 2. Clique em "Encerrar Sessão" (ou "Sair").
 3. Na tela de login (onde digita sua senha):
    -> Olhe no CANTO INFERIOR ESQUERDO da tela.
-   -> Clique no seletor de sessão e mude de "Plasma (X11)" para:
+   -> Clique no seletor de sessão e confirme se está em:
       "Plasma (Wayland)"
 4. Digite sua senha e entre no sistema.
 
 --------------------------------------------------------------------
 PASSO 2: ABRIR O ANDROID
 --------------------------------------------------------------------
-1. Abra o Menu Iniciar e clique no ícone "Waydroid"
-   (ou abra o terminal e digite: waydroid show-full-ui)
+1. Dê 2 cliques no atalho "Iniciar Android (Waydroid)" na Área de Trabalho
+   (ou no Menu Iniciar clicando em "Waydroid").
 2. A tela do Android com a Google Play Store vai carregar!
 
 --------------------------------------------------------------------
@@ -273,7 +318,7 @@ DICAS ÚTEIS NO DIA A DIA:
 ====================================================================
 EOF
 
-    chmod +x "$DESKTOP_DIR/Certificar-PlayStore.desktop" "$DESKTOP_DIR/Parar-Android.desktop" 2>/dev/null || true
+    chmod +x "$DESKTOP_DIR/Iniciar-Android.desktop" "$DESKTOP_DIR/Certificar-PlayStore.desktop" "$DESKTOP_DIR/Parar-Android.desktop" 2>/dev/null || true
 fi
 
 echo ""
@@ -282,13 +327,23 @@ echo -e "${BOLD}${GREEN}        INSTALAÇÃO E OTIMIZAÇÕES CONCLUÍDAS COM SUC
 echo -e "${BLUE}================================================================${NC}"
 echo ""
 echo -e "${BOLD}Otimizações ativas:${NC}"
+echo -e "✔️ Correção de Pressure Stall Information (psi=1) no kernel"
 echo -e "✔️ Redução de latência do mouse ativa"
+echo -e "✔️ Atalho 'Iniciar Android (Waydroid)' criado na Área de Trabalho"
 echo -e "✔️ Clique direito em arquivos .APK para instalar direto"
 echo -e "✔️ Atalho na Área de Trabalho para 'Parar Android' e liberar RAM"
 echo -e "✔️ Atalho para 'Certificar Google Play' com cópia automática do ID"
 echo ""
-echo -e "${BOLD}Como abrir o Android:${NC}"
-echo -e "1. Na tela de bloqueio/login do Regata OS, selecione a sessão ${BOLD}${YELLOW}'Plasma (Wayland)'${NC}."
-echo -e "2. Abra o menu iniciar e clique em ${GREEN}Waydroid${NC} (ou digite ${BOLD}waydroid show-full-ui${NC})."
+
+if [ "$NEED_REBOOT" -eq 1 ]; then
+    echo -e "${BOLD}${RED}⚠️  ATENÇÃO: REINICIALIZAÇÃO NECESSÁRIA!${NC}"
+    echo -e "O parâmetro de kernel ${BOLD}psi=1${NC} foi configurado no GRUB."
+    echo -e "${BOLD}Por favor, REINICIE o computador uma vez antes de abrir o Android.${NC}"
+    echo -e "Após reiniciar, entre na sessão 'Plasma (Wayland)' e abra o Android!"
+else
+    echo -e "${BOLD}Como abrir o Android:${NC}"
+    echo -e "1. Confirme que está na sessão ${BOLD}${YELLOW}'Plasma (Wayland)'${NC}."
+    echo -e "2. Dê 2 cliques em ${GREEN}Iniciar Android${NC} na Área de Trabalho ou no menu iniciar."
+fi
 echo ""
 read -p "Pressione [Enter] para fechar..."
