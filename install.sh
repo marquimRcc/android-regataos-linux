@@ -186,7 +186,8 @@ pixel_props = {
     'ro.vendor.build.id': 'TQ3A.230901.001',
     'ro.vendor.build.tags': 'release-keys',
     'ro.vendor.build.type': 'user',
-    'ro.odm.build.tags': 'release-keys'
+    'ro.odm.build.tags': 'release-keys',
+    'persist.waydroid.multi_windows': 'true'
 }
 
 for k, v in pixel_props.items():
