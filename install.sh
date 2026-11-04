@@ -209,6 +209,63 @@ Icon=system-shutdown
 Categories=System;
 EOF
 
+    cat << 'EOF' > "$DESKTOP_DIR/PASSO-A-PASSO-COMO-USAR.txt"
+====================================================================
+           GUIA RÁPIDO: COMO USAR O ANDROID NO REGATA OS
+====================================================================
+
+Parabéns! O Android (Waydroid) já está instalado e otimizado.
+
+--------------------------------------------------------------------
+PASSO 1: ENTRAR NA SESSÃO WAYLAND (OBRIGATÓRIO)
+--------------------------------------------------------------------
+O Waydroid precisa da tecnologia Wayland para funcionar com aceleração
+gráfica da sua placa de vídeo.
+
+1. Vá no Menu Iniciar do Regata OS.
+2. Clique em "Encerrar Sessão" (ou "Sair").
+3. Na tela de login (onde digita sua senha):
+   -> Olhe no CANTO INFERIOR ESQUERDO da tela.
+   -> Clique no seletor de sessão e mude de "Plasma (X11)" para:
+      "Plasma (Wayland)"
+4. Digite sua senha e entre no sistema.
+
+--------------------------------------------------------------------
+PASSO 2: ABRIR O ANDROID
+--------------------------------------------------------------------
+1. Abra o Menu Iniciar e clique no ícone "Waydroid"
+   (ou abra o terminal e digite: waydroid show-full-ui)
+2. A tela do Android com a Google Play Store vai carregar!
+
+--------------------------------------------------------------------
+PASSO 3: LIBERAR A GOOGLE PLAY STORE (APENAS NA 1ª VEZ)
+--------------------------------------------------------------------
+Ao abrir a Play Store pela primeira vez, se aparecer o aviso:
+"Dispositivo não certificado pelo Play Protect":
+
+1. Vá até a sua Área de Trabalho.
+2. Dê 2 cliques no atalho: "Certificar Google Play".
+3. Ele vai capturar seu ID, COPIAR AUTOMATICAMENTE para a sua memória
+   (Ctrl+C) e abrir o navegador oficial do Google.
+4. Na página, basta colar (Ctrl+V) e clicar em "Registrar".
+5. Em cerca de 5 a 10 minutos, a Play Store estará 100% liberada!
+
+--------------------------------------------------------------------
+DICAS ÚTEIS NO DIA A DIA:
+--------------------------------------------------------------------
+• INSTALAR JOGOS/APPS VIA ARQUIVO .APK:
+  Basta clicar com o botão direito em qualquer arquivo .apk baixado
+  e escolher "Instalar no Android (Waydroid)".
+
+• FECHAR O ANDROID E LIBERAR MEMÓRIA RAM:
+  Quando terminar de usar ou jogar, dê 2 cliques no atalho
+  "Parar Android (Liberar RAM)" na Área de Trabalho.
+
+• SUPORTE A CONTROLES (GAMEPAD):
+  Controles de Xbox, PlayStation e USB/Bluetooth funcionam nativamente.
+====================================================================
+EOF
+
     chmod +x "$DESKTOP_DIR/Certificar-PlayStore.desktop" "$DESKTOP_DIR/Parar-Android.desktop" 2>/dev/null || true
 fi
 
