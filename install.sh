@@ -157,6 +157,60 @@ else
     echo -e "${GREEN}Tradutor ARM libndk já configurado e ativo!${NC}"
 fi
 
+# 7.1 Configurar perfil de dispositivo homologado (Google Pixel 6 Pro) para Play Store automática
+echo -e "\n${YELLOW}[7.1] Aplicando perfil de dispositivo homologado (Google Pixel 6 Pro)...${NC}"
+sudo python3 -c "
+import configparser
+cfg_path = '/var/lib/waydroid/waydroid.cfg'
+config = configparser.ConfigParser()
+config.read(cfg_path)
+if 'properties' not in config:
+    config['properties'] = {}
+
+pixel_props = {
+    'ro.product.brand': 'google',
+    'ro.product.manufacturer': 'Google',
+    'ro.product.device': 'raven',
+    'ro.product.name': 'raven',
+    'ro.product.model': 'Pixel 6 Pro',
+    'ro.system.build.product': 'raven',
+    'ro.system.build.flavor': 'raven-user',
+    'ro.build.flavor': 'raven-user',
+    'ro.build.tags': 'release-keys',
+    'ro.build.type': 'user',
+    'ro.build.display.id': 'TQ3A.230901.001',
+    'ro.build.description': 'raven-user 13 TQ3A.230901.001 10750268 release-keys',
+    'ro.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.bootimage.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.vendor.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.vendor.build.id': 'TQ3A.230901.001',
+    'ro.vendor.build.tags': 'release-keys',
+    'ro.vendor.build.type': 'user',
+    'ro.odm.build.tags': 'release-keys'
+}
+
+for k, v in pixel_props.items():
+    config['properties'][k] = v
+
+with open(cfg_path, 'w') as f:
+    config.write(f)
+"
+sudo waydroid upgrade -o 2>/dev/null || true
+
+# 7.2 Instalar loja alternativa Aurora Store (sem necessidade de conta ou certificação)
+echo -e "\n${YELLOW}[7.2] Baixando loja complementar Aurora Store (FOSS)...${NC}"
+AURORA_APK="/tmp/AuroraStore.apk"
+curl -L -s -o "$AURORA_APK" "https://auroraoss.com/downloads/AuroraStore/Release/preload/AuroraStore-preload-4.7.5.apk" || true
+if [ -f "$AURORA_APK" ] && [ -s "$AURORA_APK" ]; then
+    echo "Instalando Aurora Store no Waydroid..."
+    waydroid app install "$AURORA_APK" 2>/dev/null || true
+    rm -f "$AURORA_APK"
+fi
+
+# Resetar dados da Play Store e GMS para aplicar novas assinaturas
+sudo waydroid shell pm clear com.android.vending 2>/dev/null || true
+sudo waydroid shell pm clear com.google.android.gms 2>/dev/null || true
+
 # 8. Otimizações de Desempenho e Usabilidade Pós-Instalação
 echo -e "\n${YELLOW}[8/8] Aplicando otimizações de desempenho e atalhos...${NC}"
 
@@ -384,6 +438,8 @@ echo -e "${BLUE}================================================================
 echo ""
 echo -e "${BOLD}Otimizações ativas:${NC}"
 echo -e "✔️ Correção de Pressure Stall Information (psi=1) no kernel"
+echo -e "✔️ Perfil homologado de Google Pixel 6 Pro ativo (Play Store oficial)"
+echo -e "✔️ Loja complementar Aurora Store pré-instalada (acesso FOSS à Play Store)"
 echo -e "✔️ Redução de latência do mouse ativa"
 echo -e "✔️ Atalho 'Iniciar Android (Waydroid)' criado na Área de Trabalho"
 echo -e "✔️ Clique direito em arquivos .APK para instalar direto"
