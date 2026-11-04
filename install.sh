@@ -174,10 +174,6 @@ pixel_props = {
     'ro.product.device': 'raven',
     'ro.product.name': 'raven',
     'ro.product.model': 'Pixel 6 Pro',
-    'ro.build.product': 'raven',
-    'ro.lineage.device': 'raven',
-    'ro.board.platform': 'gs101',
-    'ro.hardware': 'raven',
 
     # Build Tags e Tipo (Ocultar test-keys e userdebug de TODAS as particoes)
     'ro.build.tags': 'release-keys',
