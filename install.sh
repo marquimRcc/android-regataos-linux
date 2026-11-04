@@ -321,7 +321,127 @@ read -p "Pressione [Enter] para fechar..."
 EOF
 chmod +x "$HOME/.local/bin/waydroid-cert"
 
-# 8.4 Atalhos úteis na Área de Trabalho
+# 8.4 Integração Nativa de Desinstalação com Botão Direito no Menu (KDE Plasma)
+echo -e "\n${YELLOW}[8.4] Configurando desinstalação gráfica com botão direito para aplicativos...${NC}"
+
+# Script auxiliar executado pelo sistema para remoção limpa
+sudo tee /usr/local/bin/waydroid-uninstall-helper > /dev/null << 'EOF'
+#!/bin/bash
+PACKAGE="$1"
+[ -z "$PACKAGE" ] && exit 1
+
+if ! systemctl is-active --quiet waydroid-container; then
+    systemctl start waydroid-container
+    sleep 1
+fi
+
+lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c "pm uninstall $PACKAGE" 2>/dev/null || \
+waydroid shell pm uninstall "$PACKAGE" 2>/dev/null
+EOF
+sudo chmod 755 /usr/local/bin/waydroid-uninstall-helper
+
+# Regra de sudoers para permitir desinstalação segura e transparente sem pedir senha
+echo "ALL ALL=(ALL) NOPASSWD: /usr/local/bin/waydroid-uninstall-helper" | sudo tee /etc/sudoers.d/waydroid-uninstall > /dev/null
+sudo chmod 440 /etc/sudoers.d/waydroid-uninstall
+
+# Script principal do desinstalador gráfico (interface KDE Plasma / kdialog)
+sudo tee /usr/local/bin/waydroid-uninstall > /dev/null << 'EOF'
+#!/bin/bash
+PACKAGE="$1"
+APP_NAME="$2"
+
+[ -z "$PACKAGE" ] && exit 1
+[ -z "$APP_NAME" ] && APP_NAME="$PACKAGE"
+
+# 1. Confirmação nativa do KDE Plasma
+if command -v kdialog &>/dev/null; then
+    kdialog --title "Desinstalar Aplicativo" \
+            --yesno "Deseja realmente desinstalar <b>$APP_NAME</b> do seu sistema?" \
+            --icon "edit-delete"
+    [ $? -ne 0 ] && exit 0
+fi
+
+# 2. Executa a desinstalação no Android
+if sudo -n /usr/local/bin/waydroid-uninstall-helper "$PACKAGE" 2>/dev/null; then
+    STATUS=0
+elif command -v pkexec &>/dev/null; then
+    pkexec /usr/local/bin/waydroid-uninstall-helper "$PACKAGE"
+    STATUS=$?
+else
+    STATUS=1
+fi
+
+# 3. Remove atalhos .desktop locais
+rm -f "$HOME/.local/share/applications/waydroid.$PACKAGE.desktop"
+rm -f "$HOME/Área de trabalho/waydroid.$PACKAGE.desktop"
+rm -f "$HOME/Desktop/waydroid.$PACKAGE.desktop"
+rm -f "$HOME/Área de trabalho/$APP_NAME.desktop"
+rm -f "$HOME/Desktop/$APP_NAME.desktop"
+
+# 4. Notificação visual de sucesso
+if command -v kdialog &>/dev/null; then
+    kdialog --title "Desinstalar Aplicativo" \
+            --passivepopup "O aplicativo <b>$APP_NAME</b> foi desinstalado com sucesso!" 4 \
+            --icon "dialog-ok-apply"
+fi
+EOF
+sudo chmod 755 /usr/local/bin/waydroid-uninstall
+
+# Patch no gerador do Waydroid para que todos os novos apps já venham com o botão direito configurado
+sudo python3 -c "
+path = '/usr/lib/waydroid/tools/services/user_manager.py'
+try:
+    with open(path, 'r') as f:
+        code = f.read()
+    if 'Desktop Action uninstall' not in code:
+        target = 'glib_key_file_prepend_string_list(desktop_file, \"Desktop Entry\", \"Actions\", [\"app-settings\"])'
+        replacement = '''glib_key_file_prepend_string_list(desktop_file, \"Desktop Entry\", \"Actions\", [\"uninstall\", \"app-settings\"])
+        desktop_file.set_string(\"Desktop Action uninstall\", \"Name\", \"Desinstalar aplicativo\")
+        desktop_file.set_string(\"Desktop Action uninstall\", \"Name[pt_BR]\", \"Desinstalar aplicativo\")
+        desktop_file.set_string(\"Desktop Action uninstall\", \"Name[en]\", \"Uninstall application\")
+        desktop_file.set_string(\"Desktop Action uninstall\", \"Exec\", f\"/usr/local/bin/waydroid-uninstall {packageName} \\\"{appInfo['name']}\\\"\")
+        desktop_file.set_string(\"Desktop Action uninstall\", \"Icon\", \"edit-delete\")'''
+        if target in code:
+            code = code.replace(target, replacement)
+            with open(path, 'w') as f:
+                f.write(code)
+except Exception:
+    pass
+"
+
+# Atualizar atalhos de apps já instalados
+python3 -c "
+import glob, os, re
+system_apps = [
+    'com.android.calculator2', 'com.android.camera2', 'com.android.contacts',
+    'com.android.deskclock', 'com.android.documentsui', 'com.android.email',
+    'com.android.gallery3d', 'com.android.inputmethod.latin', 'com.android.settings',
+    'com.google.android.gms', 'org.lineageos.aperture', 'org.lineageos.eleven',
+    'org.lineageos.etar', 'org.lineageos.jelly', 'org.lineageos.recorder'
+]
+for p in glob.glob(os.path.expanduser('~/.local/share/applications/waydroid.*.desktop')):
+    pkg = os.path.basename(p).replace('waydroid.', '').replace('.desktop', '')
+    if pkg in system_apps:
+        continue
+    with open(p, 'r') as f:
+        content = f.read()
+    if 'Desktop Action uninstall' not in content:
+        m = re.search(r'^Name=(.*)$', content, re.M)
+        name = m.group(1).strip() if m else pkg
+        content = content.replace('Actions=app-settings;', 'Actions=uninstall;app-settings;')
+        content += f'''
+[Desktop Action uninstall]
+Name=Desinstalar aplicativo
+Name[pt_BR]=Desinstalar aplicativo
+Name[en]=Uninstall application
+Exec=/usr/local/bin/waydroid-uninstall {pkg} \"{name}\"
+Icon=edit-delete
+'''
+        with open(p, 'w') as f:
+            f.write(content)
+"
+
+# 8.5 Atalhos úteis na Área de Trabalho
 DESKTOP_DIR="$HOME/Área de trabalho"
 [ ! -d "$DESKTOP_DIR" ] && DESKTOP_DIR="$HOME/Desktop"
 
@@ -416,6 +536,10 @@ Ao abrir a Play Store pela primeira vez, se aparecer o aviso:
 --------------------------------------------------------------------
 DICAS ÚTEIS NO DIA A DIA:
 --------------------------------------------------------------------
+• DESINSTALAR JOGOS/APPS (100% GRÁFICO):
+  Basta clicar com o botão direito em qualquer app do Android no Menu
+  Iniciar do Regata OS e escolher "Desinstalar aplicativo".
+
 • INSTALAR JOGOS/APPS VIA ARQUIVO .APK:
   Basta clicar com o botão direito em qualquer arquivo .apk baixado
   e escolher "Instalar no Android (Waydroid)".
@@ -444,6 +568,7 @@ echo -e "✔️ Loja complementar Aurora Store pré-instalada (acesso FOSS à Pl
 echo -e "✔️ Redução de latência do mouse ativa"
 echo -e "✔️ Atalho 'Iniciar Android (Waydroid)' criado na Área de Trabalho"
 echo -e "✔️ Clique direito em arquivos .APK para instalar direto"
+echo -e "✔️ Desinstalação gráfica com 1 clique (botão direito no Menu Iniciar)"
 echo -e "✔️ Atalho na Área de Trabalho para 'Parar Android' e liberar RAM"
 echo -e "✔️ Atalho para 'Certificar Google Play' com cópia automática do ID"
 echo ""
