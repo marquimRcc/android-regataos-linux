@@ -168,28 +168,78 @@ if 'properties' not in config:
     config['properties'] = {}
 
 pixel_props = {
+    # Identidade Base Google Pixel 6 Pro
     'ro.product.brand': 'google',
     'ro.product.manufacturer': 'Google',
     'ro.product.device': 'raven',
     'ro.product.name': 'raven',
     'ro.product.model': 'Pixel 6 Pro',
-    'ro.system.build.product': 'raven',
-    'ro.system.build.flavor': 'raven-user',
-    'ro.build.flavor': 'raven-user',
+    'ro.build.product': 'raven',
+    'ro.lineage.device': 'raven',
+    'ro.board.platform': 'gs101',
+    'ro.hardware': 'raven',
+
+    # Build Tags e Tipo (Ocultar test-keys e userdebug de TODAS as particoes)
     'ro.build.tags': 'release-keys',
     'ro.build.type': 'user',
-    'ro.build.display.id': 'TQ3A.230901.001',
-    'ro.build.description': 'raven-user 13 TQ3A.230901.001 10750268 release-keys',
-    'ro.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
-    'ro.bootimage.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
-    'ro.vendor.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
-    'ro.odm.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
-    'ro.product.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
-    'ro.system_ext.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
-    'ro.vendor.build.id': 'TQ3A.230901.001',
+    'ro.system.build.tags': 'release-keys',
+    'ro.system.build.type': 'user',
+    'ro.system_ext.build.tags': 'release-keys',
+    'ro.system_ext.build.type': 'user',
     'ro.vendor.build.tags': 'release-keys',
     'ro.vendor.build.type': 'user',
     'ro.odm.build.tags': 'release-keys',
+    'ro.odm.build.type': 'user',
+    'ro.vendor_dlkm.build.tags': 'release-keys',
+    'ro.vendor_dlkm.build.type': 'user',
+
+    # Identidade Completa por Particao (Ocultar waydroid_x86_64 contra anti-tamper)
+    'ro.product.system.brand': 'Google',
+    'ro.product.system.device': 'raven',
+    'ro.product.system.name': 'raven',
+    'ro.product.system.model': 'Pixel 6 Pro',
+    'ro.product.system.manufacturer': 'Google',
+
+    'ro.product.system_ext.brand': 'Google',
+    'ro.product.system_ext.device': 'raven',
+    'ro.product.system_ext.name': 'raven',
+    'ro.product.system_ext.model': 'Pixel 6 Pro',
+    'ro.product.system_ext.manufacturer': 'Google',
+
+    'ro.product.vendor.brand': 'Google',
+    'ro.product.vendor.device': 'raven',
+    'ro.product.vendor.name': 'raven',
+    'ro.product.vendor.model': 'Pixel 6 Pro',
+    'ro.product.vendor.manufacturer': 'Google',
+
+    'ro.product.odm.brand': 'Google',
+    'ro.product.odm.device': 'raven',
+    'ro.product.odm.name': 'raven',
+    'ro.product.odm.model': 'Pixel 6 Pro',
+    'ro.product.odm.manufacturer': 'Google',
+
+    'ro.product.vendor_dlkm.brand': 'Google',
+    'ro.product.vendor_dlkm.device': 'raven',
+    'ro.product.vendor_dlkm.name': 'raven',
+    'ro.product.vendor_dlkm.model': 'Pixel 6 Pro',
+    'ro.product.vendor_dlkm.manufacturer': 'Google',
+
+    # Fingerprints sincronizados em 100% das particoes
+    'ro.build.display.id': 'TQ3A.230901.001',
+    'ro.build.description': 'raven-user 13 TQ3A.230901.001 10750268 release-keys',
+    'ro.system.build.flavor': 'raven-user',
+    'ro.build.flavor': 'raven-user',
+    'ro.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.bootimage.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.system.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.system_ext.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.vendor.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.odm.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.product.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.vendor_dlkm.build.fingerprint': 'google/raven/raven:13/TQ3A.230901.001/10750268:user/release-keys',
+    'ro.vendor.build.id': 'TQ3A.230901.001',
+
+    # Modo multi-janelas
     'persist.waydroid.multi_windows': 'true'
 }
 
