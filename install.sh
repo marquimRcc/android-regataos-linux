@@ -195,7 +195,22 @@ EOF
 mkdir -p "$HOME/.local/bin"
 cat << 'EOF' > "$HOME/.local/bin/waydroid-cert"
 #!/bin/bash
-echo "Buscando ID de certificação do Google Play..."
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+clear
+echo -e "${BLUE}================================================================${NC}"
+echo -e "${BOLD}${GREEN}        Certificação da Google Play Store (Waydroid)            ${NC}"
+echo -e "${BLUE}================================================================${NC}"
+echo ""
+
+echo -e "${YELLOW}Buscando ID de certificação do Google Services Framework...${NC}"
+echo "Digite sua senha de administrador caso solicitado:"
+
 ANDROID_ID=""
 
 if [ -f "$HOME/waydroid_script/main.py" ]; then
@@ -203,25 +218,50 @@ if [ -f "$HOME/waydroid_script/main.py" ]; then
 fi
 
 if [ -z "$ANDROID_ID" ]; then
-    ANDROID_ID=$(sudo waydroid shell 'sqlite3 /data/data/com.google.android.gsf/databases/gservices.db "select value from main where name = \"android_id\";"' 2>/dev/null | tr -d '\r\n')
+    ANDROID_ID=$(sudo waydroid shell 'sqlite3 /data/data/com.google.android.gsf/databases/gservices.db "select value from main where name = \"android_id\";"' 2>/dev/null | grep -oE '[0-9]{15,20}' | head -n 1)
+fi
+
+if [ -z "$ANDROID_ID" ]; then
+    ANDROID_ID=$(sudo waydroid shell 'sqlite3 /data/data/com.google.android.gsf/databases/gservices.db "select * from main where name = \"android_id\";"' 2>/dev/null | tr -d '\r\n' | sed 's/.*|//')
 fi
 
 if [ -n "$ANDROID_ID" ]; then
-    echo "================================================="
-    echo "ID do seu Android: $ANDROID_ID"
-    echo "================================================="
+    echo ""
+    echo -e "${GREEN}================================================================${NC}"
+    echo -e "${BOLD}ID do seu Android:${NC} ${YELLOW}$ANDROID_ID${NC}"
+    echo -e "${GREEN}================================================================${NC}"
+    
     if command -v wl-copy &>/dev/null; then
         echo -n "$ANDROID_ID" | wl-copy 2>/dev/null
-        echo "[OK] ID copiado para a área de transferência!"
+        echo -e "${GREEN}✔️  ID copiado automaticamente para a sua área de transferência (Ctrl+V)!${NC}"
     elif command -v xclip &>/dev/null; then
         echo -n "$ANDROID_ID" | xclip -selection clipboard 2>/dev/null
-        echo "[OK] ID copiado para a área de transferência!"
+        echo -e "${GREEN}✔️  ID copiado automaticamente para a sua área de transferência (Ctrl+V)!${NC}"
     fi
-    echo "Abrindo o navegador para registro..."
+    
+    echo -e "\nAbrindo a página oficial da Google no seu navegador..."
     xdg-open "https://www.google.com/android/uncertified/" 2>/dev/null &
+    
+    echo ""
+    echo -e "${BOLD}Instruções:${NC}"
+    echo "1. Na página do Google que abriu, faça login com sua conta."
+    echo "2. Cole (Ctrl+V) o número no campo 'ID do Google Services Framework'."
+    echo "3. Clique no botão 'Registrar'."
+    echo ""
+    read -p "Após clicar em 'Registrar' no site, pressione [Enter] aqui para resetar o cache da Play Store..."
+    
+    echo -e "\n${YELLOW}Limpando cache da Play Store e aplicando liberação...${NC}"
+    sudo waydroid shell pm clear com.android.vending 2>/dev/null || true
+    sudo waydroid shell pm clear com.google.android.gms 2>/dev/null || true
+    
+    echo -e "\n${GREEN}${BOLD}✔️  Tudo pronto!${NC}"
+    echo -e "Agora você já pode abrir a Google Play Store e entrar normalmente com seu e-mail e senha."
 else
-    echo "Banco de dados da Play Store ainda não gerado. Abra o Waydroid pela primeira vez antes de registrar."
+    echo -e "${RED}Não foi possível obter o ID automaticamente.${NC}"
+    echo "Certifique-se de que o Waydroid já foi iniciado pelo menos uma vez."
 fi
+
+echo ""
 read -p "Pressione [Enter] para fechar..."
 EOF
 chmod +x "$HOME/.local/bin/waydroid-cert"
