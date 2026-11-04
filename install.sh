@@ -37,6 +37,7 @@ sudo zypper --non-interactive install --no-recommends \
     python313-gobject \
     python313-pyclipper \
     python313-gbinder \
+    dnsmasq \
     curl \
     tar \
     xclip
