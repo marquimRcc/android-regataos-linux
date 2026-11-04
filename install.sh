@@ -416,7 +416,9 @@ system_apps = [
     'com.android.calculator2', 'com.android.camera2', 'com.android.contacts',
     'com.android.deskclock', 'com.android.documentsui', 'com.android.email',
     'com.android.gallery3d', 'com.android.inputmethod.latin', 'com.android.settings',
-    'com.google.android.gms', 'org.lineageos.aperture', 'org.lineageos.eleven',
+    'com.android.vending', 'com.aurora.store', 'com.google.android.gms',
+    'com.google.android.apps.messaging', 'com.google.android.contacts',
+    'org.lineageos.aperture', 'org.lineageos.eleven',
     'org.lineageos.etar', 'org.lineageos.jelly', 'org.lineageos.recorder'
 ]
 for p in glob.glob(os.path.expanduser('~/.local/share/applications/waydroid.*.desktop')):
