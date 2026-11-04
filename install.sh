@@ -100,8 +100,15 @@ fi
 
 # 5.1 Instalar módulo gbinder corrigido para Python 3.13 e configurar dnsmasq
 echo -e "\n${YELLOW}[5.1] Configurando módulo gbinder e rotas de rede...${NC}"
-sudo curl -L -s -o /usr/lib64/python3.13/site-packages/gbinder.cpython-313-x86_64-linux-gnu.so \
-    "https://raw.githubusercontent.com/marquimRcc/android-regataos-linux/main/assets/gbinder.cpython-313-x86_64-linux-gnu.so"
+SCRIPT_BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+if [ -f "$SCRIPT_BASE_DIR/assets/gbinder.cpython-313-x86_64-linux-gnu.so" ]; then
+    sudo cp -f "$SCRIPT_BASE_DIR/assets/gbinder.cpython-313-x86_64-linux-gnu.so" /usr/lib64/python3.13/site-packages/
+else
+    sudo curl -L -s -o /usr/lib64/python3.13/site-packages/gbinder.cpython-313-x86_64-linux-gnu.so \
+        "https://raw.githubusercontent.com/marquimRcc/android-regataos-linux/main/assets/gbinder.cpython-313-x86_64-linux-gnu.so"
+fi
+mkdir -p "$HOME/.local/lib/python3.13/site-packages"
+cp -f /usr/lib64/python3.13/site-packages/gbinder.cpython-313-x86_64-linux-gnu.so "$HOME/.local/lib/python3.13/site-packages/" 2>/dev/null || true
 sudo ln -sf /usr/sbin/dnsmasq /usr/bin/dnsmasq
 
 # 6. Habilitar serviço do contêiner e inicializar a imagem do Android
@@ -220,8 +227,8 @@ if [ -d "$DESKTOP_DIR" ]; then
 Encoding=UTF-8
 Version=1.0
 Type=Application
-Terminal=true
-Exec=/usr/bin/waydroid show-full-ui
+Terminal=false
+Exec=waydroid show-full-ui
 Name=Iniciar Android (Waydroid)
 Comment=Inicia a tela do Android com Google Play Store
 Icon=waydroid
