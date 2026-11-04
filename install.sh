@@ -271,40 +271,57 @@ curl -L -s -o "$TMP_DIR/pairipfix.apk" "$PAIRIPFIX_URL" || true
 
 sudo python3 -c "
 import sqlite3, os
-db_dir = '/var/lib/waydroid/data/adb'
-os.makedirs(db_dir, exist_ok=True)
-db_path = os.path.join(db_dir, 'magisk.db')
-conn = sqlite3.connect(db_path)
-cur = conn.cursor()
-cur.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT, value INT, PRIMARY KEY(key));')
-cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('zygisk', 1);\")
-cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('magiskhide', 1);\")
-cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('denylist', 1);\")
-cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('sulist', 0);\")
-cur.execute('CREATE TABLE IF NOT EXISTS denylist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
-cur.execute('CREATE TABLE IF NOT EXISTS hidelist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
-packages_to_hide = [
-    ('com.google.android.gms', 'com.google.android.gms'),
-    ('com.google.android.gms', 'com.google.android.gms.unstable'),
-    ('com.android.vending', 'com.android.vending'),
-    ('com.pazugames.avatarworld', 'com.pazugames.avatarworld'),
-    ('com.roblox.client', 'com.roblox.client'),
-    ('com.supercell.brawlstars', 'com.supercell.brawlstars'),
+
+user = os.environ.get('SUDO_USER', os.environ.get('USER', 'pcmini'))
+possible_dirs = [
+    f'/home/{user}/.local/share/waydroid/data/adb',
+    '/var/lib/waydroid/data/adb'
 ]
-for pkg, proc in packages_to_hide:
-    cur.execute('INSERT OR IGNORE INTO denylist (package_name, process) VALUES (?, ?);', (pkg, proc))
-    cur.execute('INSERT OR IGNORE INTO hidelist (package_name, process) VALUES (?, ?);', (pkg, proc))
-conn.commit()
-conn.close()
+
+for db_dir in possible_dirs:
+    if os.path.exists(os.path.dirname(db_dir)):
+        os.makedirs(db_dir, exist_ok=True)
+        db_path = os.path.join(db_dir, 'magisk.db')
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute('CREATE TABLE IF NOT EXISTS settings (key TEXT, value INT, PRIMARY KEY(key));')
+        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('zygisk', 1);\")
+        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('magiskhide', 1);\")
+        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('denylist', 1);\")
+        cur.execute(\"INSERT OR REPLACE INTO settings (key, value) VALUES ('sulist', 0);\")
+        cur.execute('CREATE TABLE IF NOT EXISTS denylist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+        cur.execute('CREATE TABLE IF NOT EXISTS hidelist (package_name TEXT, process TEXT, PRIMARY KEY (package_name, process));')
+        packages_to_hide = [
+            ('com.google.android.gms', 'com.google.android.gms'),
+            ('com.google.android.gms', 'com.google.android.gms.unstable'),
+            ('com.android.vending', 'com.android.vending'),
+            ('com.pazugames.avatarworld', 'com.pazugames.avatarworld'),
+            ('com.roblox.client', 'com.roblox.client'),
+            ('com.supercell.brawlstars', 'com.supercell.brawlstars'),
+        ]
+        for pkg, proc in packages_to_hide:
+            cur.execute('INSERT OR IGNORE INTO denylist (package_name, process) VALUES (?, ?);', (pkg, proc))
+            cur.execute('INSERT OR IGNORE INTO hidelist (package_name, process) VALUES (?, ?);', (pkg, proc))
+        conn.commit()
+        conn.close()
+        try:
+            os.chmod(db_path, 0o600)
+        except Exception:
+            pass
 "
-sudo chmod 600 /var/lib/waydroid/data/adb/magisk.db 2>/dev/null || true
 
 sudo systemctl start waydroid-container 2>/dev/null || true
 sleep 3
-sudo mkdir -p /var/lib/waydroid/data/local/tmp
-[ -f "$TMP_DIR/PlayIntegrityFix.zip" ] && sudo cp "$TMP_DIR/PlayIntegrityFix.zip" /var/lib/waydroid/data/local/tmp/
-[ -f "$TMP_DIR/LSPosed.zip" ] && sudo cp "$TMP_DIR/LSPosed.zip" /var/lib/waydroid/data/local/tmp/
-sudo chmod 777 /var/lib/waydroid/data/local/tmp/* 2>/dev/null || true
+
+USER_DATA="/home/${SUDO_USER:-$USER}/.local/share/waydroid/data"
+[ ! -d "$USER_DATA" ] && USER_DATA="/var/lib/waydroid/data"
+
+sudo mkdir -p "$USER_DATA/local/tmp" /var/lib/waydroid/data/local/tmp 2>/dev/null || true
+[ -f "$TMP_DIR/PlayIntegrityFix.zip" ] && sudo cp "$TMP_DIR/PlayIntegrityFix.zip" "$USER_DATA/local/tmp/" 2>/dev/null || true
+[ -f "$TMP_DIR/LSPosed.zip" ] && sudo cp "$TMP_DIR/LSPosed.zip" "$USER_DATA/local/tmp/" 2>/dev/null || true
+[ -f "$TMP_DIR/PlayIntegrityFix.zip" ] && sudo cp "$TMP_DIR/PlayIntegrityFix.zip" /var/lib/waydroid/data/local/tmp/ 2>/dev/null || true
+[ -f "$TMP_DIR/LSPosed.zip" ] && sudo cp "$TMP_DIR/LSPosed.zip" /var/lib/waydroid/data/local/tmp/ 2>/dev/null || true
+sudo chmod 777 "$USER_DATA/local/tmp"/* /var/lib/waydroid/data/local/tmp/* 2>/dev/null || true
 
 sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid -- /system/bin/sh -c \
     "BOOTMODE=true /data/adb/magisk/magisk --install-module /data/local/tmp/PlayIntegrityFix.zip" 2>/dev/null || true
