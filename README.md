@@ -19,13 +19,14 @@ curl -sSL https://raw.githubusercontent.com/marquimRcc/android-regataos-linux/ma
 ## ⚡ O que o script faz e otimiza automaticamente:
 
 1. **Correção de Kernel (Pressure Stall Information - `psi=1`):** Adiciona o parâmetro de gerenciamento de processos e memória ao GRUB, evitando que o contêiner Android feche sozinho no boot.
-2. **Dependências do sistema:** Instala `lxc`, `python313-gobject`, `python313-pyclipper`, `dnsmasq`, `curl`, `tar`, `xclip`.
-3. **Correção de pacotes:** Instala o Waydroid, atualiza `libgbinder1` e fornece o módulo `gbinder` corrigido para o Python 3.13.
-4. **Android Oficial (GAPPS):** Baixa e inicializa a imagem LineageOS com **Google Play Store e Google Play Services**.
-5. **Suporte a Jogos ARM (libndk):** Ativa tradução ARM para suporte a 99% dos jogos e apps mobile (Free Fire, Roblox, Brawl Stars, etc.).
-6. **Otimizações de Latência:** Reduz o atraso do cursor do mouse em jogos no Wayland (`persist.waydroid.cursor_on_subsurface`).
-7. **Integração com Dolphin (Gerenciador de Arquivos):** Permite clicar com o botão direito em qualquer arquivo `.apk` e escolher **"Instalar no Android (Waydroid)"**.
-8. **Atalhos Automáticos na Área de Trabalho:**
+2. **Configuração de Rede e Firewall (`firewalld`):** Libera a interface virtual `waydroid0` na zona confiável (`trusted`) e ativa mascaramento NAT permanente para acesso imediato à internet no Android.
+3. **Dependências do sistema:** Instala `lxc`, `python313-gobject`, `python313-pyclipper`, `dnsmasq`, `curl`, `tar`, `xclip`.
+4. **Correção de pacotes:** Instala o Waydroid, atualiza `libgbinder1` e fornece o módulo `gbinder` corrigido para o Python 3.13.
+5. **Android Oficial (GAPPS):** Baixa e inicializa a imagem LineageOS com **Google Play Store e Google Play Services**.
+6. **Suporte a Jogos ARM (libndk):** Ativa tradução ARM para suporte a 99% dos jogos e apps mobile (Free Fire, Roblox, Brawl Stars, etc.).
+7. **Otimizações de Latência:** Reduz o atraso do cursor do mouse em jogos no Wayland (`persist.waydroid.cursor_on_subsurface`).
+8. **Integração com Dolphin (Gerenciador de Arquivos):** Permite clicar com o botão direito em qualquer arquivo `.apk` e escolher **"Instalar no Android (Waydroid)"**.
+9. **Atalhos Automáticos na Área de Trabalho:**
    - **`Iniciar Android (Waydroid)`**: Atalho direto para iniciar o sistema Android.
    - **`Certificar Google Play`**: Obtém seu ID, copia para a área de transferência e abre o site de liberação do Google.
    - **`Parar Android (Liberar RAM)`**: Encerra o contêiner e libera toda a memória RAM quando você parar de jogar/usar.
