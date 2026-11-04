@@ -42,23 +42,28 @@ sudo systemctl stop waydroid-container 2>/dev/null || true
 sleep 2
 
 # 3. Verificar e Configurar Magisk Delta se necessário
-echo -e "\n${YELLOW}[3/5] Configurando base do Magisk Delta nas imagens do Android...${NC}"
-SCRIPT_DIR="$HOME/waydroid_script"
+echo -e "\n${YELLOW}[3/5] Verificando Magisk Delta no Android...${NC}"
+if [ ! -d "/var/lib/waydroid/overlay/system/etc/init/magisk" ]; then
+    echo "Instalando base do Magisk Delta..."
+    SCRIPT_DIR="$HOME/waydroid_script"
 
-if [ ! -d "$SCRIPT_DIR" ]; then
-    echo "Baixando script utilitário do Waydroid..."
-    mkdir -p "$SCRIPT_DIR"
-    curl -L -s https://github.com/casualsnek/waydroid_script/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$SCRIPT_DIR"
+    if [ ! -d "$SCRIPT_DIR" ]; then
+        echo "Baixando script utilitário do Waydroid..."
+        mkdir -p "$SCRIPT_DIR"
+        curl -L -s https://github.com/casualsnek/waydroid_script/archive/refs/heads/main.tar.gz | tar -xz --strip-components=1 -C "$SCRIPT_DIR"
+    fi
+
+    if [ ! -d "$SCRIPT_DIR/venv" ]; then
+        echo "Criando ambiente virtual Python..."
+        python3 -m venv "$SCRIPT_DIR/venv"
+        "$SCRIPT_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
+    fi
+
+    cd "$SCRIPT_DIR"
+    sudo "$SCRIPT_DIR/venv/bin/python3" main.py install magisk
+else
+    echo -e "${GREEN}Base do Magisk Delta já está instalada! Pulando etapa redundante...${NC}"
 fi
-
-if [ ! -d "$SCRIPT_DIR/venv" ]; then
-    echo "Criando ambiente virtual Python..."
-    python3 -m venv "$SCRIPT_DIR/venv"
-    "$SCRIPT_DIR/venv/bin/pip" install --quiet -r "$SCRIPT_DIR/requirements.txt"
-fi
-
-cd "$SCRIPT_DIR"
-sudo "$SCRIPT_DIR/venv/bin/python3" main.py install magisk
 
 # 4. Injeção direta e pré-configuração (Zygisk, Play Integrity Fix, LSPosed, PairIPFix)
 echo -e "\n${YELLOW}[4/5] Injetando e ativando módulos automaticamente (Zygisk + LSPosed + PIF)...${NC}"
