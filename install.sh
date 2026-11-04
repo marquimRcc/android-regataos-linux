@@ -1,7 +1,8 @@
 #!/bin/bash
 # ==============================================================================
 # Script de Instalação Automatizada do Android (Waydroid) no Regata OS
-# Compatível com máquinas recém-formatadas ou instalações limpas do Regata OS
+# Repositório: https://github.com/marquimRcc/android-regataos-linux
+# Autor: Marcos Vinicios <marquim.rcc@gmail.com>
 # ==============================================================================
 
 # Cores
@@ -19,7 +20,7 @@ echo -e "${BLUE}================================================================
 echo ""
 
 # 1. Solicitar permissões de administrador no início
-echo -e "${YELLOW}[1/6] Verificando privilégios de administrador (sudo)...${NC}"
+echo -e "${YELLOW}[1/7] Verificando privilégios de administrador (sudo)...${NC}"
 if ! sudo -v; then
     echo -e "${RED}Erro: Senha incorreta ou permissão recusada.${NC}"
     read -p "Pressione [Enter] para fechar..."
@@ -30,17 +31,18 @@ fi
 while true; do sudo -n true; sleep 50; kill -0 "$$" || exit; done 2>/dev/null &
 
 # 2. Instalar dependências base do sistema
-echo -e "\n${YELLOW}[2/6] Instalando dependências do sistema via zypper...${NC}"
+echo -e "\n${YELLOW}[2/7] Instalando dependências do sistema via zypper...${NC}"
 sudo zypper --non-interactive install --no-recommends \
     lxc \
     python313-gobject \
     python313-pyclipper \
     python313-gbinder \
     curl \
-    tar
+    tar \
+    xclip
 
 # 3. Baixar e instalar o Waydroid (contornando falso conflito de versão do repositório)
-echo -e "\n${YELLOW}[3/6] Instalando pacote Waydroid oficial...${NC}"
+echo -e "\n${YELLOW}[3/7] Instalando pacote Waydroid oficial...${NC}"
 if ! command -v waydroid &>/dev/null; then
     echo "Baixando pacote Waydroid do repositório regataos..."
     zypper --non-interactive download waydroid || true
@@ -57,7 +59,7 @@ else
 fi
 
 # 4. Atualizar libgbinder1 (garante compatibilidade com Python 3.13)
-echo -e "\n${YELLOW}[4/6] Verificando biblioteca libgbinder1...${NC}"
+echo -e "\n${YELLOW}[4/7] Verificando biblioteca libgbinder1...${NC}"
 if ! nm -D /usr/lib64/libgbinder.so.1 2>/dev/null | grep -q "gbinder_servicemanager_new2"; then
     echo "Atualizando libgbinder1 para versão com suporte a runtime binder..."
     TMP_RPM="/tmp/libgbinder1_updated.rpm"
@@ -71,7 +73,7 @@ else
 fi
 
 # 5. Habilitar serviço do contêiner e inicializar a imagem do Android
-echo -e "\n${YELLOW}[5/6] Configurando contêiner e imagens do sistema...${NC}"
+echo -e "\n${YELLOW}[5/7] Configurando contêiner e imagens do sistema...${NC}"
 sudo systemctl enable --now waydroid-container
 
 if [ ! -f /var/lib/waydroid/images/system.img ]; then
@@ -83,7 +85,7 @@ else
 fi
 
 # 6. Configurar traduções ARM (libndk) para permitir rodar jogos e aplicativos de celular
-echo -e "\n${YELLOW}[6/6] Configurando suporte para jogos e apps ARM (libndk)...${NC}"
+echo -e "\n${YELLOW}[6/7] Configurando suporte para jogos e apps ARM (libndk)...${NC}"
 SCRIPT_DIR="$HOME/waydroid_script"
 
 if [ ! -d "$SCRIPT_DIR" ]; then
@@ -107,19 +109,122 @@ else
     echo -e "${GREEN}Tradutor ARM libndk já configurado e ativo!${NC}"
 fi
 
+# 7. Otimizações de Desempenho e Usabilidade Pós-Instalação
+echo -e "\n${YELLOW}[7/7] Aplicando otimizações de desempenho e atalhos...${NC}"
+
+# 7.1 Otimização de latência do cursor no Wayland
+sudo waydroid prop set persist.waydroid.cursor_on_subsurface true 2>/dev/null || true
+
+# 7.2 Instalação com 2 cliques ou botão direito para arquivos .APK
+mkdir -p "$HOME/.local/share/kio/servicemenus" "$HOME/.local/share/applications"
+
+cat << 'EOF' > "$HOME/.local/share/kio/servicemenus/waydroid-install.desktop"
+[Desktop Entry]
+Type=Service
+ServiceTypes=KonqPopupMenu/Plugin
+MimeType=application/vnd.android.package-archive;application/x-authorware-bin;
+Actions=InstallWaydroid;
+
+[Desktop Action InstallWaydroid]
+Name=Instalar no Android (Waydroid)
+Icon=waydroid
+Exec=waydroid app install %f
+EOF
+
+cat << 'EOF' > "$HOME/.local/share/applications/waydroid-apk-installer.desktop"
+[Desktop Entry]
+Type=Application
+Name=Instalador de APK (Waydroid)
+Exec=waydroid app install %f
+MimeType=application/vnd.android.package-archive;
+Icon=waydroid
+NoDisplay=false
+Terminal=false
+Categories=System;
+EOF
+
+# 7.3 Script utilitário para certificação da Play Store
+mkdir -p "$HOME/.local/bin"
+cat << 'EOF' > "$HOME/.local/bin/waydroid-cert"
+#!/bin/bash
+echo "Buscando ID de certificação do Google Play..."
+ANDROID_ID=""
+
+if [ -f "$HOME/waydroid_script/main.py" ]; then
+    ANDROID_ID=$(sudo "$HOME/waydroid_script/venv/bin/python3" "$HOME/waydroid_script/main.py" certified 2>/dev/null | grep -oE '[0-9]{15,20}' | head -n 1)
+fi
+
+if [ -z "$ANDROID_ID" ]; then
+    ANDROID_ID=$(sudo waydroid shell 'sqlite3 /data/data/com.google.android.gsf/databases/gservices.db "select value from main where name = \"android_id\";"' 2>/dev/null | tr -d '\r\n')
+fi
+
+if [ -n "$ANDROID_ID" ]; then
+    echo "================================================="
+    echo "ID do seu Android: $ANDROID_ID"
+    echo "================================================="
+    if command -v wl-copy &>/dev/null; then
+        echo -n "$ANDROID_ID" | wl-copy 2>/dev/null
+        echo "[OK] ID copiado para a área de transferência!"
+    elif command -v xclip &>/dev/null; then
+        echo -n "$ANDROID_ID" | xclip -selection clipboard 2>/dev/null
+        echo "[OK] ID copiado para a área de transferência!"
+    fi
+    echo "Abrindo o navegador para registro..."
+    xdg-open "https://www.google.com/android/uncertified/" 2>/dev/null &
+else
+    echo "Banco de dados da Play Store ainda não gerado. Abra o Waydroid pela primeira vez antes de registrar."
+fi
+read -p "Pressione [Enter] para fechar..."
+EOF
+chmod +x "$HOME/.local/bin/waydroid-cert"
+
+# 7.4 Atalhos úteis na Área de Trabalho
+DESKTOP_DIR="$HOME/Área de trabalho"
+[ ! -d "$DESKTOP_DIR" ] && DESKTOP_DIR="$HOME/Desktop"
+
+if [ -d "$DESKTOP_DIR" ]; then
+    cat << 'EOF' > "$DESKTOP_DIR/Certificar-PlayStore.desktop"
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Terminal=true
+Exec=/home/pcmini/.local/bin/waydroid-cert
+Name=Certificar Google Play
+Comment=Obtém o ID e abre a página de liberação do Google Play Store
+Icon=google-play
+Categories=System;
+EOF
+
+    cat << 'EOF' > "$DESKTOP_DIR/Parar-Android.desktop"
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Terminal=false
+Exec=waydroid session stop
+Name=Parar Android (Liberar RAM)
+Comment=Encerra a sessão do Android e libera a memória RAM do sistema
+Icon=system-shutdown
+Categories=System;
+EOF
+
+    chmod +x "$DESKTOP_DIR/Certificar-PlayStore.desktop" "$DESKTOP_DIR/Parar-Android.desktop" 2>/dev/null || true
+fi
+
 echo ""
 echo -e "${BLUE}================================================================${NC}"
-echo -e "${BOLD}${GREEN}        INSTALAÇÃO E CONFIGURAÇÃO CONCLUÍDAS COM SUCESSO!        ${NC}"
+echo -e "${BOLD}${GREEN}        INSTALAÇÃO E OTIMIZAÇÕES CONCLUÍDAS COM SUCESSO!         ${NC}"
 echo -e "${BLUE}================================================================${NC}"
+echo ""
+echo -e "${BOLD}Otimizações ativas:${NC}"
+echo -e "✔️ Redução de latência do mouse ativa"
+echo -e "✔️ Clique direito em arquivos .APK para instalar direto"
+echo -e "✔️ Atalho na Área de Trabalho para 'Parar Android' e liberar RAM"
+echo -e "✔️ Atalho para 'Certificar Google Play' com cópia automática do ID"
 echo ""
 echo -e "${BOLD}Como abrir o Android:${NC}"
-echo -e "1. Na tela de bloqueio/login do Regata OS, mude a sessão de"
-echo -e "   'Plasma (X11)' para ${BOLD}${YELLOW}'Plasma (Wayland)'${NC}."
-echo -e "2. Após fazer login, clique no ícone ${GREEN}Waydroid${NC} no menu iniciar"
-echo -e "   ou digite no terminal: ${BOLD}waydroid show-full-ui${NC}"
-echo ""
-echo -e "${BOLD}Google Play Store (se pedir certificação de dispositivo):${NC}"
-echo -e "Execute no terminal: ${YELLOW}cd ~/waydroid_script && ./venv/bin/python3 main.py certified${NC}"
-echo -e "e registre o código gerado em: ${BLUE}https://www.google.com/android/uncertified/${NC}"
+echo -e "1. Na tela de bloqueio/login do Regata OS, selecione a sessão ${BOLD}${YELLOW}'Plasma (Wayland)'${NC}."
+echo -e "2. Abra o menu iniciar e clique em ${GREEN}Waydroid${NC} (ou digite ${BOLD}waydroid show-full-ui${NC})."
 echo ""
 read -p "Pressione [Enter] para fechar..."
