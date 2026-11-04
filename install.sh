@@ -111,6 +111,15 @@ mkdir -p "$HOME/.local/lib/python3.13/site-packages"
 cp -f /usr/lib64/python3.13/site-packages/gbinder.cpython-313-x86_64-linux-gnu.so "$HOME/.local/lib/python3.13/site-packages/" 2>/dev/null || true
 sudo ln -sf /usr/sbin/dnsmasq /usr/bin/dnsmasq
 
+# 5.2 Configurar Firewall para permitir DHCP e Internet no Waydroid
+echo -e "\n${YELLOW}[5.2] Configurando Firewall para liberação da rede e internet...${NC}"
+if command -v firewall-cmd &>/dev/null; then
+    sudo firewall-cmd --zone=trusted --add-interface=waydroid0 --permanent 2>/dev/null || true
+    sudo firewall-cmd --add-masquerade --permanent 2>/dev/null || true
+    sudo firewall-cmd --reload 2>/dev/null || true
+fi
+sudo sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1 || true
+
 # 6. Habilitar serviço do contêiner e inicializar a imagem do Android
 echo -e "\n${YELLOW}[6/8] Configurando contêiner e imagens do sistema...${NC}"
 sudo systemctl enable --now waydroid-container
